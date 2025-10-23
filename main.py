@@ -23,26 +23,27 @@ async def debug_headers(request: Request):
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    # Vérifie les deux headers possibles
+    # ✅ Autoriser certaines routes sans token
+    if request.url.path in ["/", "/docs", "/openapi.json", "/debug/headers"]:
+        return await call_next(request)
+
+    # ✅ Lire les headers possibles
     token = (
-        request.headers.get("x-api-key")
+        request.headers.get("api-token")
+        or request.headers.get("x-api-key")
         or request.headers.get("authorization")
     )
     expected_token = os.getenv("API_TOKEN")
 
-    # Debug temporaire (à retirer ensuite)
+    # Debug temporaire
     print("DEBUG token reçu:", token)
     print("DEBUG token attendu:", expected_token)
 
-    # Autoriser les routes publiques
-    if request.url.path in ["/", "/docs", "/openapi.json"]:
-        return await call_next(request)
-
+    # Vérification
     if token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
     return await call_next(request)
-
 
 @app.get("/race/{race_id}/{year}")
 def get_race_info(race_id: str, year: str):
