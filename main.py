@@ -2,7 +2,7 @@ from procyclingstats import Race, RaceStartlist, Stage, Ranking
 
 import os
 from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import PlainTextResponse
 app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN")
@@ -12,16 +12,14 @@ from fastapi.responses import JSONResponse
 @app.get("/debug/headers")
 async def debug_headers(request: Request):
     try:
-        headers = {k: v for k, v in request.headers.items()}
-        print("=== HEADERS REÇUS ===")
-        for k, v in headers.items():
+        print("=== DEBUG HEADERS (brut) ===")
+        for k, v in request.headers.items():
             print(f"{k}: {v}")
-        print("======================")
-        return JSONResponse(content=headers)
+        print("============================")
+        return PlainTextResponse("OK (check logs)")
     except Exception as e:
         print("Erreur debug_headers:", str(e))
-        return JSONResponse(content={"error": str(e)}, status_code=500)
-
+        return PlainTextResponse(f"Erreur: {e}", status_code=500)
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
