@@ -8,19 +8,26 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    # Autorise la page d'accueil et docs publiques
+    # Vérifie les deux headers possibles
+    token = (
+        request.headers.get("x-api-key")
+        or request.headers.get("authorization")
+    )
+    expected_token = os.getenv("API_TOKEN")
+
+    # Debug temporaire (à retirer ensuite)
+    print("DEBUG token reçu:", token)
+    print("DEBUG token attendu:", expected_token)
+
+    # Autoriser les routes publiques
     if request.url.path in ["/", "/docs", "/openapi.json"]:
         return await call_next(request)
 
-    # Récupère le token depuis les headers
-    token = request.headers.get("x-api-key")
-    if token != API_TOKEN:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API token"
-        )
+    if token != expected_token:
+        raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
     return await call_next(request)
+
 
 @app.get("/race/{race_id}/{year}")
 def get_race_info(race_id: str, year: str):
