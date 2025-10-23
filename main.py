@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI, Request, HTTPException, status
 app = FastAPI()
 
-API_TOKEN = os.getenv("API_TOKEN", "super-secret-token")  # ou via ton .env
+API_TOKEN = os.getenv("API_TOKEN")
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
