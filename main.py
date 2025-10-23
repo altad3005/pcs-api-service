@@ -1,135 +1,88 @@
 from procyclingstats import Race, RaceStartlist, Stage, Ranking
-
 import os
-from fastapi import FastAPI, Request, HTTPException, status
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI, Request, HTTPException
+
 app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN")
 
-from fastapi.responses import JSONResponse
-
-@app.get("/debug/headers")
-async def debug_headers(request: Request):
-    try:
-        print("=== DEBUG HEADERS (brut) ===")
-        for k, v in request.headers.items():
-            print(f"{k}: {v}")
-        print("============================")
-        return PlainTextResponse("OK (check logs)")
-    except Exception as e:
-        print("Erreur debug_headers:", str(e))
-        return PlainTextResponse(f"Erreur: {e}", status_code=500)
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    # ✅ Autoriser certaines routes sans token
+    # Autoriser les routes publiques
     if request.url.path in ["/", "/docs", "/openapi.json", "/debug/headers"]:
         return await call_next(request)
 
-    # ✅ Lire les headers possibles
+    # Lire les variantes possibles du header
     token = (
         request.headers.get("api-token")
+        or request.headers.get("Api-Token")
         or request.headers.get("x-api-key")
         or request.headers.get("authorization")
     )
     expected_token = os.getenv("API_TOKEN")
 
-    # Debug temporaire
-    print("DEBUG token reçu:", token)
-    print("DEBUG token attendu:", expected_token)
-
-    # Vérification
     if token != expected_token:
         raise HTTPException(status_code=401, detail="Invalid or missing API token")
 
     return await call_next(request)
 
+
 @app.get("/race/{race_id}/{year}")
 def get_race_info(race_id: str, year: str):
-    """
-    Exemple: /race/tour-de-france/2025
-    Retourne les informations générales d'une course
-    """
+    """Retourne les informations générales d'une course"""
     race = Race(f"race/{race_id}/{year}")
     return race.parse()
 
 
 @app.get("/race/{race_id}/{year}/startlist")
 def get_startlist(race_id: str, year: str):
-    """
-    Exemple: /race/tour-de-france/2025/startlist
-    Retourne la liste de départ d'une course
-    """
+    """Retourne la liste de départ d'une course"""
     startlist = RaceStartlist(f"race/{race_id}/{year}/startlist")
-    riders = startlist.startlist()
-    return riders
+    return startlist.startlist()
 
 
 @app.get("/race/{race_id}/{year}/gc")
 def get_gc(race_id: str, year: str):
-    """
-    Exemple: /race/tour-de-france/2025/gc
-    Retourne le classement général d'une course
-    (utilise la dernière étape si c’est un GT)
-    """
+    """Retourne le classement général d'une course"""
     race = Race(f"race/{race_id}/{year}")
     stages = race.stages()
 
     if not stages:
-        # Si c'est une course d'un jour, retourner les résultats directs
         stage = Stage(f"race/{race_id}/{year}/result")
         return stage.results()
 
-    # Prendre la dernière étape pour avoir le GC final
     last_stage_url = stages[-1]["stage_url"]
     stage = Stage(last_stage_url)
-
     return stage.gc() or []
 
 
 @app.get("/race/{race_id}/{year}/stage/{stage_number}")
 def get_stage_results(race_id: str, year: str, stage_number: str):
-    """
-    Exemple: /race/tour-de-france/2025/stage/1
-    Retourne les résultats d'une étape spécifique
-    """
+    """Retourne les résultats d'une étape spécifique"""
     stage = Stage(f"race/{race_id}/{year}/stage-{stage_number}")
     return stage.results()
 
 
 @app.get("/race/{race_id}/{year}/stages")
 def get_stages_list(race_id: str, year: str):
-    """
-    Exemple: /race/tour-de-france/2025/stages
-    Retourne la liste de toutes les étapes d'une course
-    """
+    """Retourne la liste de toutes les étapes d'une course"""
     race = Race(f"race/{race_id}/{year}")
     return race.stages()
 
 
 @app.get("/ranking/individual")
 def get_individual_ranking():
-    """
-    Exemple: /ranking/individual?limit=10
-    Retourne le classement PCS individuel mondial
-    """
+    """Retourne le classement PCS individuel mondial"""
     ranking = Ranking("rankings/me/individual")
-    data = ranking.individual_ranking(
-        "rider_name",
-        "rank",
-        "points",
-        "nationality",
-        "team_name",
+    return ranking.individual_ranking(
+        "rider_name", "rank", "points", "nationality", "team_name"
     )
-    return data
 
 
 @app.get("/")
 def root():
-    """
-    Documentation des endpoints disponibles
-    """
+    """Documentation des endpoints disponibles"""
     return {
         "message": "API ProcyclingStats",
         "endpoints": {
