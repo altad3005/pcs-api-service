@@ -6,6 +6,16 @@ app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN")
 
+@app.get("/debug/headers")
+async def debug_headers(request: Request):
+    headers = dict(request.headers)
+    print("=== HEADERS REÇUS ===")
+    for k, v in headers.items():
+        print(f"{k}: {v}")
+    print("======================")
+    return headers
+
+
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
     # Vérifie les deux headers possibles
