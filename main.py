@@ -11,18 +11,13 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    public_paths = ["/", "/docs", "/openapi.json", "/debug/headers", "/favicon.ico"]
+    public_paths = ["/", "/docs", "/openapi.json", "/favicon.ico"]
 
-    # Routes publiques : pas de vérif
-    if request.url.path in public_paths:
+    if any(request.url.path.startswith(p) for p in public_paths):
         return await call_next(request)
 
-    token = (
-        request.headers.get("api-token")
-        or request.headers.get("Api-Token")
-        or request.headers.get("x-api-key")
-        or request.headers.get("authorization")
-    )
+    # Lecture unique + tolérance de casse
+    token = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
     expected_token = os.getenv("API_TOKEN")
 
     if token != expected_token:
@@ -32,11 +27,12 @@ async def verify_token(request: Request, call_next):
                 "status": "error",
                 "code": 401,
                 "message": "Unauthorized: Invalid or missing API token",
-                "hint": "Provide a valid token in header 'x-api-key' or 'Api-Token'",
+                "hint": "Use header 'x-api-key' with your API token",
             },
         )
 
     return await call_next(request)
+
 
 
 @app.get("/race/{race_id}/{year}")
