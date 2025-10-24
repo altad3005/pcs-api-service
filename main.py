@@ -12,7 +12,7 @@ async def verify_token(request: Request, call_next):
     print("DEBUG ENV API_TOKEN:", os.getenv("API_TOKEN"))
 
     public_paths = ["/", "/docs", "/openapi.json", "/favicon.ico"]
-    if any(request.url.path.startswith(p) for p in public_paths):
+    if request.url.path in public_paths:
         return await call_next(request)
 
     expected_token = os.getenv("API_TOKEN")
@@ -39,9 +39,6 @@ async def verify_token(request: Request, call_next):
         )
 
     return await call_next(request)
-
-
-
 
 @app.get("/race/{race_id}/{year}")
 def get_race_info(race_id: str, year: str):
