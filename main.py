@@ -6,20 +6,24 @@ app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN")
 
-
-
-
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
     public_paths = ["/", "/docs", "/openapi.json", "/favicon.ico"]
-
     if any(request.url.path.startswith(p) for p in public_paths):
         return await call_next(request)
 
-    # Lecture unique + tolérance de casse
-    token = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
     expected_token = os.getenv("API_TOKEN")
+    if not expected_token:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "code": 500,
+                "message": "Server misconfiguration: API_TOKEN is not set",
+            },
+        )
 
+    token = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
     if token != expected_token:
         return JSONResponse(
             status_code=401,
@@ -32,6 +36,7 @@ async def verify_token(request: Request, call_next):
         )
 
     return await call_next(request)
+
 
 
 
