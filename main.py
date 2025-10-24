@@ -1,19 +1,22 @@
 from procyclingstats import Race, RaceStartlist, Stage, Ranking
 import os
 from fastapi import FastAPI, Request, HTTPException
-
+from fastapi.responses import JSONResponse
 app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN")
 
 
+
+
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    # Autoriser les routes publiques
-    if request.url.path in ["/", "/docs", "/openapi.json", "/debug/headers"]:
+    public_paths = ["/", "/docs", "/openapi.json", "/debug/headers", "/favicon.ico"]
+
+    # Routes publiques : pas de vérif
+    if any(request.url.path.startswith(p) for p in public_paths):
         return await call_next(request)
 
-    # Lire les variantes possibles du header
     token = (
         request.headers.get("api-token")
         or request.headers.get("Api-Token")
@@ -23,7 +26,16 @@ async def verify_token(request: Request, call_next):
     expected_token = os.getenv("API_TOKEN")
 
     if token != expected_token:
-        raise HTTPException(status_code=401, detail="Invalid or missing API token")
+        # ✅ Retourne une réponse propre et lisible
+        return JSONResponse(
+            status_code=401,
+            content={
+                "status": "error",
+                "code": 401,
+                "message": "Unauthorized: Invalid or missing API token",
+                "hint": "Provide a valid token in header 'x-api-key' or 'Api-Token'",
+            },
+        )
 
     return await call_next(request)
 
