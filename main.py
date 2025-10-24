@@ -14,7 +14,7 @@ async def verify_token(request: Request, call_next):
     public_paths = ["/", "/docs", "/openapi.json", "/debug/headers", "/favicon.ico"]
 
     # Routes publiques : pas de vérif
-    if any(request.url.path.startswith(p) for p in public_paths):
+    if request.url.path in public_paths:
         return await call_next(request)
 
     token = (
@@ -26,7 +26,6 @@ async def verify_token(request: Request, call_next):
     expected_token = os.getenv("API_TOKEN")
 
     if token != expected_token:
-        # ✅ Retourne une réponse propre et lisible
         return JSONResponse(
             status_code=401,
             content={
