@@ -9,8 +9,6 @@ API_TOKEN = os.getenv("API_TOKEN")
 
 @app.middleware("http")
 async def verify_token(request: Request, call_next):
-    print("DEBUG ENV API_TOKEN:", os.getenv("API_TOKEN"))
-
     public_paths = ["/", "/docs", "/openapi.json", "/favicon.ico"]
     if request.url.path in public_paths:
         return await call_next(request)
